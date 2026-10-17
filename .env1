@@ -1,0 +1,8 @@
+# Dane dostępowe do bazy PostgreSQL
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=mysecretpassword
+POSTGRES_DB=pizzeriadb
+POSTGRES_PORT=5432
+
+# Parametr połączeniowy ConnectionString używany przez Flask-SQLAlchemy
+DATABASE_URL=postgresql+psycopg2://postgres:mysecretpassword@localhost:5432/pizzeriadb
