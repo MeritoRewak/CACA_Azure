@@ -1,0 +1,27 @@
+# Virtual environment (do not send to cloud)
+.venv/
+venv/
+ENV/
+
+# Python byte-code and cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Tests and testing frameworks (e.g., Robot Framework)
+tests/
+log.html
+report.html
+output.xml
+
+# Git and version control
+.git/
+.gitignore
+
+# IDEs and local editor settings
+.vscode/
+.idea/
+
+# Environment files and sensitive credentials
+.env
+*.env
