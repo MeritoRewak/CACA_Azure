@@ -3,7 +3,7 @@ name: Build and Deploy to Azure Container Apps
 on:
   push:
     branches:
-      - main  # Zmień na 'master', jeśli tak nazywa się Twoja główna gałąź
+      - main  # Zmień na 'master', jeśli tak się nazywa Twoja główna gałąź
 
 jobs:
   build-and-deploy:
@@ -12,7 +12,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 1. Logowanie do ACR
+      # 1. Logowanie do Azure CLI przy użyciu poświadczeń administratora ACR (lub dopasowane do środowiska)
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: '{"clientId":"${{ secrets.REGISTRY_USERNAME }}","clientSecret":"${{ secrets.REGISTRY_PASSWORD }}","subscriptionId":"","tenantId":""}' 
+          # Alternatywnie, jeśli wolimy najprostszy skrypt az cli:
+          enable-AzPSSession: false
+
+      # 2. Logowanie do ACR
       - name: Log in to ACR
         uses: azure/docker-login@v1
         with:
@@ -20,19 +28,17 @@ jobs:
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
 
-      # 2. Budowanie i wysyłanie obrazu Docker do ACR
+      # 3. Budowanie i wysyłanie obrazu Docker do ACR
       - name: Build and push Docker image
         run: |
           docker build -t cacaproject.azurecr.io/pizzawsb-app:${{ github.sha }} .
           docker push cacaproject.azurecr.io/pizzawsb-app:${{ github.sha }}
 
-      # 3. Bezpośrednia aktualizacja Container App za pomocą oficjalnej akcji z loginem ACR
+      # 4. Aktualizacja Azure Container Apps (teraz ma już zrobiony az login wyżej!)
       - name: Deploy to Azure Container Apps
         uses: azure/container-apps-deploy-action@v1
         with:
           acrName: cacaproject
-          acrUsername: ${{ secrets.REGISTRY_USERNAME }}
-          acrPassword: ${{ secrets.REGISTRY_PASSWORD }}
           containerAppName: pizzawsb2
           resourceGroup: WSBMerito
           imageToDeploy: cacaproject.azurecr.io/pizzawsb-app:${{ github.sha }}
