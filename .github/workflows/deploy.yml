@@ -3,7 +3,7 @@ name: Build and Deploy to Azure Container Apps
 on:
   push:
     branches:
-      - main  # Zmień na 'master', jeśli tak się nazywa Twoja główna gałąź
+      - main  # lub master
 
 jobs:
   build-and-deploy:
@@ -12,15 +12,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 1. Logowanie do Azure CLI przy użyciu poświadczeń administratora ACR (lub dopasowane do środowiska)
-      - name: Azure Login
-        uses: azure/login@v1
-        with:
-          creds: '{"clientId":"${{ secrets.REGISTRY_USERNAME }}","clientSecret":"${{ secrets.REGISTRY_PASSWORD }}","subscriptionId":"","tenantId":""}' 
-          # Alternatywnie, jeśli wolimy najprostszy skrypt az cli:
-          enable-AzPSSession: false
-
-      # 2. Logowanie do ACR
+      # 1. Logowanie do ACR przy użyciu sekretów administratora
       - name: Log in to ACR
         uses: azure/docker-login@v1
         with:
@@ -28,17 +20,25 @@ jobs:
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
 
-      # 3. Budowanie i wysyłanie obrazu Docker do ACR
+      # 2. Budowanie i wysyłanie obrazu do ACR
       - name: Build and push Docker image
         run: |
           docker build -t cacaproject.azurecr.io/pizzawsb-app:${{ github.sha }} .
           docker push cacaproject.azurecr.io/pizzawsb-app:${{ github.sha }}
 
-      # 4. Aktualizacja Azure Container Apps (teraz ma już zrobiony az login wyżej!)
-      - name: Deploy to Azure Container Apps
-        uses: azure/container-apps-deploy-action@v1
+      # 3. Aktualizacja aplikacji przez ACR credentials bezpośrednio w CLI (bez az login)
+      - name: Update ACA Image
+        uses: azure/CLI@v1
         with:
-          acrName: cacaproject
-          containerAppName: pizzawsb2
-          resourceGroup: WSBMerito
-          imageToDeploy: cacaproject.azurecr.io/pizzawsb-app:${{ github.sha }}
+          inlineScript: |
+            az containerapp registry set \
+              --name pizzawsb2 \
+              --resource-group WSBMerito \
+              --server cacaproject.azurecr.io \
+              --username ${{ secrets.REGISTRY_USERNAME }} \
+              --password ${{ secrets.REGISTRY_PASSWORD }}
+            
+            az containerapp update \
+              --name pizzawsb2 \
+              --resource-group WSBMerito \
+              --image cacaproject.azurecr.io/pizzawsb-app:${{ github.sha }}
