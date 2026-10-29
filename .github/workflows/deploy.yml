@@ -12,7 +12,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 1. Logowanie do ACR przy użyciu sekretów administratora
+      # 1. Logowanie do ACR
       - name: Log in to ACR
         uses: azure/docker-login@v1
         with:
@@ -26,19 +26,13 @@ jobs:
           docker build -t cacaproject.azurecr.io/pizzawsb-app:${{ github.sha }} .
           docker push cacaproject.azurecr.io/pizzawsb-app:${{ github.sha }}
 
-      # 3. Aktualizacja aplikacji przez ACR credentials bezpośrednio w CLI (bez az login)
-      - name: Update ACA Image
-        uses: azure/CLI@v1
+      # 3. Wdrożenie bezpośrednio przez akcję ACA (bez Azure CLI i bez az login)
+      - name: Deploy to Azure Container Apps
+        uses: azure/container-apps-deploy-action@v1
         with:
-          inlineScript: |
-            az containerapp registry set \
-              --name pizzawsb2 \
-              --resource-group WSBMerito \
-              --server cacaproject.azurecr.io \
-              --username ${{ secrets.REGISTRY_USERNAME }} \
-              --password ${{ secrets.REGISTRY_PASSWORD }}
-            
-            az containerapp update \
-              --name pizzawsb2 \
-              --resource-group WSBMerito \
-              --image cacaproject.azurecr.io/pizzawsb-app:${{ github.sha }}
+          acrName: cacaproject
+          acrUsername: ${{ secrets.REGISTRY_USERNAME }}
+          acrPassword: ${{ secrets.REGISTRY_PASSWORD }}
+          containerAppName: pizzawsb2
+          resourceGroup: WSBMerito
+          imageToDeploy: cacaproject.azurecr.io/pizzawsb-app:${{ github.sha }}
