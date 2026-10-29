@@ -1,4 +1,4 @@
-name: Build and Deploy to Azure Container Apps
+name: Build and Push to Azure Container Registry
 
 on:
   push:
@@ -6,13 +6,13 @@ on:
       - main  # lub master
 
 jobs:
-  build-and-deploy:
+  build-and-push:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 1. Logowanie do ACR
+      # 1. Logowanie do ACR (używa kluczy admina, działa bezbłędnie)
       - name: Log in to ACR
         uses: azure/docker-login@v1
         with:
@@ -20,19 +20,8 @@ jobs:
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
 
-      # 2. Budowanie i wysyłanie obrazu do ACR
+      # 2. Budowanie i wysyłanie obrazu Docker do ACR
       - name: Build and push Docker image
         run: |
           docker build -t cacaproject.azurecr.io/pizzawsb-app:${{ github.sha }} .
           docker push cacaproject.azurecr.io/pizzawsb-app:${{ github.sha }}
-
-      # 3. Wdrożenie bezpośrednio przez akcję ACA (bez Azure CLI i bez az login)
-      - name: Deploy to Azure Container Apps
-        uses: azure/container-apps-deploy-action@v1
-        with:
-          acrName: cacaproject
-          acrUsername: ${{ secrets.REGISTRY_USERNAME }}
-          acrPassword: ${{ secrets.REGISTRY_PASSWORD }}
-          containerAppName: pizzawsb2
-          resourceGroup: WSBMerito
-          imageToDeploy: cacaproject.azurecr.io/pizzawsb-app:${{ github.sha }}
