@@ -30,15 +30,15 @@ provider "render" {
 
 # 4. Baza PostgreSQL
 resource "render_postgres" "db" {
-  name    = "wsbpizza-pgdb2"
+  name    = "wsbpizza-pgdb"
   plan    = "free"
-  version = "15"
+  version = "18"
   region  = "frankfurt"
 }
 
 # 5. Web Service uruchamiany z obrazu zbudowanego w GitHub Actions (GHCR)
 resource "render_web_service" "app" {
-  name   = "pizzawsb-app2"
+  name   = "pizzawsb-app"
   plan   = "free"
   region = "frankfurt"
 
@@ -53,11 +53,7 @@ resource "render_web_service" "app" {
 
   env_vars = {
     DATABASE_URL = {
-      value = replace(
-        render_postgres.db.connection_info.internal_connection_string,
-        "/^postgres(ql)?:/",
-        "postgresql+psycopg:"
-      )
+      value = render_postgres.db.connection_info.internal_connection_string
     }
     PORT = {
       value = "5000"
