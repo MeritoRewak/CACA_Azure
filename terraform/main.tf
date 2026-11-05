@@ -1,16 +1,16 @@
-# 1. Configure required provider plugins and versions
+# 1. Provider
 terraform {
   required_version = ">= 1.0.0"
 
   required_providers {
     render = {
       source  = "render-oss/render"
-      version = "~> 1.0"
+      version = "~> 1.0" # sprawdź aktualną wersję w rejestrze
     }
   }
 }
 
-# 2. Declare input variables (Terraform automatically reads values from terraform.tfvars)
+# 2. Zmienne
 variable "render_api_key" {
   type        = string
   description = "API Key used to authenticate with the Render API"
@@ -22,48 +22,65 @@ variable "render_owner_id" {
   description = "The Owner or Organization ID in Render"
 }
 
-# 3. Initialize the Render provider using the variables
+# 3. Provider Render
 provider "render" {
   api_key  = var.render_api_key
   owner_id = var.render_owner_id
 }
 
-# 4. Provision a managed PostgreSQL database
+# 4. Baza PostgreSQL
 resource "render_postgres" "db" {
-  name    = "pizzawsb-db2"
+  name    = "wsbpizza-pgdb2"
   plan    = "free"
   version = "15"
   region  = "frankfurt"
 }
 
-# 5. Provision a containerized Web Service
+# 5. Web Service uruchamiany z obrazu zbudowanego w GitHub Actions (GHCR)
 resource "render_web_service" "app" {
   name   = "pizzawsb-app2"
   plan   = "free"
   region = "frankfurt"
 
-  # Define runtime source as native Docker container
   runtime_source = {
-    native_docker = {}
+    image = {
+      image_url = "ghcr.io/meritorewak/caca_azure" # tylko małe litery
+      tag       = "latest"
+      # Dla prywatnego pakietu GHCR dodaj registry_credential_id
+      # (zasób render_registry_credential) - sprawdź schemat w dokumentacji.
+    }
   }
 
-  # Environment variables injected into the web application
   env_vars = {
-    DATABASE_URL = render_postgres.db.connection_string
+    DATABASE_URL = {
+      value = replace(
+        render_postgres.db.connection_info.internal_connection_string,
+        "/^postgres(ql)?:/",
+        "postgresql+psycopg:"
+      )
+    }
+    PORT = {
+      value = "5000"
+    }
   }
 }
 
-# 6. Output blocks to retrieve critical connection details and URLs
-output "database_internal_url" {
-  value     = render_postgres.db.connection_string
-  sensitive = true
-}
-
-output "deploy_hook_url" {
-  value     = render_web_service.app.deploy_hook_url
-  sensitive = true
+# 6. Outputy
+output "service_id" {
+  description = "ID usługi - użyj jako sekretu RENDER_SERVICE_ID w GitHub Actions"
+  value       = render_web_service.app.id
 }
 
 output "service_url" {
   value = render_web_service.app.url
+}
+
+output "database_internal_url" {
+  value     = render_postgres.db.connection_info.internal_connection_string
+  sensitive = true
+}
+
+output "database_external_url" {
+  value     = render_postgres.db.connection_info.external_connection_string
+  sensitive = true
 }
