@@ -43,7 +43,7 @@ provider "render" {
 # ==========================================
 
 resource "render_postgres" "db" {
-  name    = "wsbpizza-pgdb"
+  name    = "wsbpizza-pgdb2"
   plan    = "free"
   version = "18"
   region  = "frankfurt"
@@ -57,7 +57,7 @@ resource "render_web_service" "app" {
   name   = "pizzawsb-app"
   plan   = "free"
   region = "frankfurt"
-
+  
   runtime_source = {
     image = {
       image_url = "ghcr.io/meritorewak/caca_azure"
